@@ -13,10 +13,12 @@
 
 # import and initialize the pygame library
 import pygame
+import random
 
 # import pygame.locals for easier access to key coordinates
 # updated to conform to flake8 and black standards
 from pygame.locals import (
+    RLEACCEL,
     K_UP,
     K_DOWN,
     K_LEFT,
@@ -35,8 +37,13 @@ pygame.init()
 class Player(pygame.sprite.Sprite):
     def __init__(self):
         super(Player, self).__init__()
-        self.surf = pygame.Surface((75, 25))
-        self.surf.fill((255, 255, 255))
+        # self.surf = pygame.Surface((75, 25))
+        # self.surf.fill((255, 160, 255))
+
+        # if you have image the uncomment below code
+        self.surf = pygame.image.load("jet.png").convert()
+        self.surf.set_colorkey((0, 0, 0), RLEACCEL)
+
         self.rect = self.surf.get_rect()
 
     # move the sprite based on user key presses
@@ -61,6 +68,61 @@ class Player(pygame.sprite.Sprite):
             self.rect.bottom = SCREEN_HEIGHT
 
 
+# define the enemy object by extending pygame.sprite.Sprite
+# the surface you draw on the screen is now an attribute of 'enemy'
+class Enemy(pygame.sprite.Sprite):
+    def __init__(self):
+        super(Enemy, self).__init__()
+        # self.surf = pygame.Surface((20, 10))
+        # self.surf.fill((255, 255, 255))
+        # surf_center = ((SCREEN_WIDTH - self.surf.get_width())/2, (SCREEN_HEIGHT - self.surf.get_height())/2)
+        # print(surf_center)
+        # self.rect = self.surf.get_rect(center=surf_center)
+
+        # if you have image the uncomment below code
+        self.surf = pygame.image.load("missile.png").convert()
+        self.surf.set_colorkey((0, 0, 0), RLEACCEL)
+
+        # the starting position is randomly generated, as is the speed
+        self.rect = self.surf.get_rect(
+            center=(
+                random.randint(SCREEN_WIDTH+20, SCREEN_WIDTH+100),
+                random.randint(0, SCREEN_HEIGHT))
+        )
+        self.speed = random.randint(5, 10)
+        # print(self.speed)
+
+    # move the sprite based on speed
+    # remove the sprite when it passes the left edge of the screen
+    def update(self):
+        self.rect.move_ip(-self.speed, 0)
+        if self.rect.right < 0:
+            self.kill()
+
+
+# Define the cloud object by extending pygame.sprite.Sprite
+# Use an image for a better-looking sprite
+class Cloud(pygame.sprite.Sprite):
+    def __init__(self):
+        super(Cloud, self).__init__()
+        self.surf = pygame.image.load("clouds.png").convert()
+        self.surf.set_colorkey((0, 0, 0), RLEACCEL)
+        # The starting position is randomly generated
+        self.rect = self.surf.get_rect(
+            center=(
+                random.randint(SCREEN_WIDTH + 20, SCREEN_WIDTH + 100),
+                random.randint(0, SCREEN_HEIGHT),
+            )
+        )
+
+    # Move the cloud based on a constant speed
+    # Remove the cloud when it passes the left edge of the screen
+    def update(self):
+        self.rect.move_ip(-5, 0)
+        if self.rect.right < 0:
+            self.kill()
+
+
 # define constants for screen width and height
 SCREEN_WIDTH = 800
 SCREEN_HEIGHT = 600
@@ -70,8 +132,32 @@ SCREEN_HEIGHT = 600
 # set up the drawing window
 screen = pygame.display.set_mode([SCREEN_WIDTH, SCREEN_HEIGHT])
 
+# Setup the clock for a decent framerate
+clock = pygame.time.Clock()
+
+# create a custom event for adding a new enemy
+ADD_ENEMY = pygame.USEREVENT + 1
+# print(ADD_ENEMY)
+pygame.time.set_timer(ADD_ENEMY, 250)
+ADD_CLOUD = pygame.USEREVENT + 2
+pygame.time.set_timer(ADD_CLOUD, 1000)
+
+# total 3 lifelines
+lifeline = 3
+
+
 # instantiate player, Right now, this is just a rectangle.
 player = Player()
+
+# create groups to hold enemy sprites and all sprites
+# - enemies is used for collision detection and position updates
+# - clouds is used for position updates
+# - all_sprites is used for rendering
+enemies = pygame.sprite.Group()
+clouds = pygame.sprite.Group()
+all_sprites = pygame.sprite.Group()
+all_sprites.add(player)
+
 
 # Setting up the game loop
         # Every game from Pong to Fortnite uses a game loop to control gameplay.
@@ -100,14 +186,32 @@ while running:
         elif event.type == QUIT:
             running = False
 
+        # add a new enemy
+        elif event.type == ADD_ENEMY:
+            # create the new enemy and add it to sprite groups
+            new_enemy = Enemy()
+            enemies.add(new_enemy)
+            all_sprites.add(new_enemy)
+
+        # Add a new cloud?
+        elif event.type == ADD_CLOUD:
+            # Create the new cloud and add it to sprite groups
+            new_cloud = Cloud()
+            clouds.add(new_cloud)
+            all_sprites.add(new_cloud)
+
     # get the set of keys pressed and check for user input
     pressed_keys = pygame.key.get_pressed()
 
     # update the player sprite based on user key presses
     player.update(pressed_keys)
 
-    # fill the background with black
-    screen.fill((0, 0, 0))
+    # update enemy position and clouds
+    enemies.update()
+    clouds.update()
+
+    # Fill the screen with sky blue
+    screen.fill((135, 206, 250))
 
     # create a surface and pass in a tuple containing its length and width
     # surf = pygame.Surface((50, 50))
@@ -123,10 +227,33 @@ while running:
 
     # draw the player on the screen
     # screen.blit(player.surf, (SCREEN_WIDTH/2, SCREEN_HEIGHT/2))
-    screen.blit(player.surf, player.rect)
+    # screen.blit(player.surf, player.rect)
+    for entity in all_sprites:
+        screen.blit(entity.surf, entity.rect)
+
+    # check if any enemies have collided with the player
+    if pygame.sprite.spritecollideany(player, enemies):
+        # print(lifeline)
+        # if so, then remove the player and stop the loop
+        player.kill()
+        # running = False
+
+        if lifeline > 1:
+            # restart the game by removing enemies from all_sprites and empty the enemies
+            all_sprites.remove(enemies)
+            enemies.empty()
+            player = Player()
+            all_sprites.add(player)
+            # decrease the lifeline by 1 till it reaches to 0
+            lifeline -= 1
+        else:
+            running = False
 
     # update the display
     pygame.display.flip()
+
+    # Ensure program maintains a rate of 30 frames per second
+    clock.tick(30)
 
 # done! time to quit
 pygame.quit()
