@@ -10,4 +10,6 @@
   
   5) The player cannot move off the screen.
   
-  6) The game ends either when the player is hit by an obstacle or when the user closes the window.
+  6) The player has 3 lives if player hit by an obstacle.
+  
+  6) The game ends either the player loose all the lives or when the user closes the window.
