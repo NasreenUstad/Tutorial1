@@ -142,8 +142,8 @@ pygame.time.set_timer(ADD_ENEMY, 250)
 ADD_CLOUD = pygame.USEREVENT + 2
 pygame.time.set_timer(ADD_CLOUD, 1000)
 
-# total 3 lifelines
-lifeline = 3
+# total 3 lives
+lives = 3
 
 
 # instantiate player, Right now, this is just a rectangle.
@@ -238,14 +238,14 @@ while running:
         player.kill()
         # running = False
 
-        if lifeline > 1:
+        if lives > 1:
             # restart the game by removing enemies from all_sprites and empty the enemies
             all_sprites.remove(enemies)
             enemies.empty()
             player = Player()
             all_sprites.add(player)
             # decrease the lifeline by 1 till it reaches to 0
-            lifeline -= 1
+            lives -= 1
         else:
             running = False
 
