@@ -12,4 +12,6 @@
   
   6) The player has 3 lives if player hit by an obstacle.
   
-  6) The game ends either the player loose all the lives or when the user closes the window.
+  7) The game ends either the player loose all the lives or when the user closes the window.
+  
+  ![pygame window](https://github.com/NasreenUstad/Tutorial1/blob/master/game%20window.png)
